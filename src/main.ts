@@ -5,8 +5,9 @@ import { DesktopControls } from './input/DesktopControls'
 import { Environment } from './scene/Environment'
 import { ViewerController } from './scene/ViewerController'
 import { MediaLoader } from './media/MediaLoader'
-import { MediaItem } from './media/types'
+import { MediaItem, MediaType } from './media/types'
 import { Gallery } from './ui/Gallery'
+import { manifest } from 'virtual:asset-manifest'
 
 type AppMode = 'gallery' | 'viewer'
 
@@ -80,10 +81,38 @@ class App {
     // Start in gallery mode
     this.setMode('gallery')
 
+    // Load assets from manifest
+    this.loadFromManifest()
+
     // Start render loop
     this.renderer.setAnimationLoop(this.render.bind(this))
 
     console.log('VR Media Viewer ready - use mouse to orbit, click to interact')
+  }
+
+  private async loadFromManifest(): Promise<void> {
+    if (manifest.length === 0) {
+      console.log('No assets in manifest. Add files to public/assets/')
+      return
+    }
+
+    // Convert manifest entries to MediaItems
+    this.mediaItems = manifest.map((entry) => ({
+      id: crypto.randomUUID(),
+      name: entry.name,
+      type: entry.type as MediaType,
+      url: entry.path,
+    }))
+
+    // Update UI
+    const currentFileSpan = document.getElementById('current-file')
+    if (currentFileSpan) {
+      currentFileSpan.textContent = `${this.mediaItems.length} asset(s) loaded`
+    }
+
+    // Load into gallery
+    await this.gallery.setItems(this.mediaItems)
+    console.log('Loaded', this.mediaItems.length, 'assets from manifest')
   }
 
   private onVRSessionStart(): void {
