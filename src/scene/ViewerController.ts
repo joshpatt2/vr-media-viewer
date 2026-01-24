@@ -4,24 +4,28 @@ import { MediaLoader } from '../media/MediaLoader'
 import { FlatScreen } from './FlatScreen'
 import { Sphere360, StereoMode } from './Sphere360'
 import { PanoViewer } from './PanoViewer'
+import { SpatialViewer } from './SpatialViewer'
 
-export type ViewerMode = 'flat' | '360' | 'pano'
+export type ViewerMode = 'flat' | '360' | 'pano' | 'spatial'
 
 export class ViewerController {
   private flatScreen: FlatScreen
   private sphere360: Sphere360
   private panoViewer: PanoViewer
+  private spatialViewer: SpatialViewer
   private currentMode: ViewerMode = 'flat'
 
   constructor(scene: THREE.Scene, mediaLoader: MediaLoader) {
     this.flatScreen = new FlatScreen(scene, mediaLoader)
     this.sphere360 = new Sphere360(scene, mediaLoader)
     this.panoViewer = new PanoViewer(scene, mediaLoader)
+    this.spatialViewer = new SpatialViewer(scene)
 
     // Start with nothing visible
     this.flatScreen.setVisible(false)
     this.sphere360.setVisible(false)
     this.panoViewer.setVisible(false)
+    this.spatialViewer.setVisible(false)
   }
 
   async loadMedia(item: MediaItem): Promise<void> {
@@ -31,6 +35,8 @@ export class ViewerController {
       newMode = '360'
     } else if (item.type === 'image-pano' || item.type === 'video-pano') {
       newMode = 'pano'
+    } else if (item.type === 'image-spatial') {
+      newMode = 'spatial'
     } else {
       newMode = 'flat'
     }
@@ -48,6 +54,9 @@ export class ViewerController {
     } else if (newMode === 'pano') {
       await this.panoViewer.loadMedia(item)
       this.panoViewer.setVisible(true)
+    } else if (newMode === 'spatial') {
+      await this.spatialViewer.loadMedia(item)
+      this.spatialViewer.setVisible(true)
     } else {
       await this.flatScreen.loadMedia(item)
       this.flatScreen.setVisible(true)
@@ -77,6 +86,7 @@ export class ViewerController {
     this.flatScreen.setVisible(false)
     this.sphere360.setVisible(false)
     this.panoViewer.setVisible(false)
+    this.spatialViewer.setVisible(false)
   }
 
   handleInteraction(object: THREE.Object3D): void {
@@ -86,6 +96,8 @@ export class ViewerController {
       this.sphere360.handleInteraction()
     } else if (this.currentMode === 'pano') {
       this.panoViewer.handleInteraction()
+    } else if (this.currentMode === 'spatial') {
+      this.spatialViewer.handleInteraction()
     }
   }
 
@@ -105,9 +117,14 @@ export class ViewerController {
     return this.panoViewer
   }
 
+  getSpatialViewer(): SpatialViewer {
+    return this.spatialViewer
+  }
+
   dispose(): void {
     this.flatScreen.dispose()
     this.sphere360.dispose()
     this.panoViewer.dispose()
+    this.spatialViewer.dispose()
   }
 }

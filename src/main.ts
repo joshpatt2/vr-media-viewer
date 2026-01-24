@@ -45,6 +45,10 @@ class App {
     )
     this.camera.position.set(0, 1.6, 3)
 
+    // Enable stereo layers (1 = left eye, 2 = right eye)
+    this.camera.layers.enable(1)
+    this.camera.layers.enable(2)
+
     // Environment (floor, lights)
     new Environment(this.scene)
 
@@ -193,6 +197,7 @@ class App {
       this.viewer.getFlatScreen().setVisible(false)
       this.viewer.getSphere360().setVisible(false)
       this.viewer.getPanoViewer().setVisible(false)
+      this.viewer.getSpatialViewer().setVisible(false)
 
       // Reset camera for gallery view
       if (!this.isInVR) {

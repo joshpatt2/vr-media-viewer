@@ -8,6 +8,7 @@
     "preview": "vite preview --host"
   },
   "dependencies": {
+    "libheif-js": "^1.19.8",
     "three": "^0.170.0"
   },
   "devDependencies": {

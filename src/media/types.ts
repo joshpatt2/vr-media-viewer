@@ -1,4 +1,4 @@
-export type MediaType = 'image' | 'video' | 'image-360' | 'video-360' | 'image-pano' | 'video-pano'
+export type MediaType = 'image' | 'video' | 'image-360' | 'video-360' | 'image-pano' | 'video-pano' | 'image-spatial'
 
 export interface MediaItem {
   id: string
