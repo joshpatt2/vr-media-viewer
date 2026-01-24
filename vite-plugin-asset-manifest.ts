@@ -5,23 +5,27 @@ import * as path from 'path'
 interface AssetEntry {
   path: string
   name: string
-  type: 'image' | 'video' | 'image-360' | 'video-360'
+  type: 'image' | 'video' | 'image-360' | 'video-360' | 'image-pano' | 'video-pano'
 }
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov']
 
-function getMediaType(filePath: string, is360: boolean): AssetEntry['type'] {
+function getMediaType(filePath: string, is360: boolean, isPano: boolean): AssetEntry['type'] {
   const ext = path.extname(filePath).toLowerCase()
   const isVideo = VIDEO_EXTENSIONS.includes(ext)
 
   if (isVideo) {
-    return is360 ? 'video-360' : 'video'
+    if (is360) return 'video-360'
+    if (isPano) return 'video-pano'
+    return 'video'
   }
-  return is360 ? 'image-360' : 'image'
+  if (is360) return 'image-360'
+  if (isPano) return 'image-pano'
+  return 'image'
 }
 
-function scanDirectory(dir: string, baseUrl: string, is360: boolean = false): AssetEntry[] {
+function scanDirectory(dir: string, baseUrl: string, is360: boolean = false, isPano: boolean = false): AssetEntry[] {
   const entries: AssetEntry[] = []
 
   if (!fs.existsSync(dir)) {
@@ -38,14 +42,15 @@ function scanDirectory(dir: string, baseUrl: string, is360: boolean = false): As
     if (file.isDirectory()) {
       // Recurse into subdirectories
       const subIs360 = is360 || file.name === '360'
-      entries.push(...scanDirectory(fullPath, `${baseUrl}/${file.name}`, subIs360))
+      const subIsPano = isPano || file.name === 'pano'
+      entries.push(...scanDirectory(fullPath, `${baseUrl}/${file.name}`, subIs360, subIsPano))
     } else {
       const ext = path.extname(file.name).toLowerCase()
       if ([...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS].includes(ext)) {
         entries.push({
           path: `${baseUrl}/${file.name}`,
           name: file.name,
-          type: getMediaType(file.name, is360),
+          type: getMediaType(file.name, is360, isPano),
         })
       }
     }

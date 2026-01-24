@@ -4,7 +4,7 @@ declare module 'virtual:asset-manifest' {
   interface AssetEntry {
     path: string
     name: string
-    type: 'image' | 'video' | 'image-360' | 'video-360'
+    type: 'image' | 'video' | 'image-360' | 'video-360' | 'image-pano' | 'video-pano'
   }
   export const manifest: AssetEntry[]
 }

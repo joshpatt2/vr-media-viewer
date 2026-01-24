@@ -124,7 +124,8 @@ class App {
     this.isInVR = false
     this.desktopControls.setEnabled(true)
     // Reset camera when exiting VR
-    if (this.mode === 'viewer' && this.viewer.getMode() === '360') {
+    const viewerMode = this.viewer.getMode()
+    if (this.mode === 'viewer' && (viewerMode === '360' || viewerMode === 'pano')) {
       this.desktopControls.setImmersiveMode(true)
     } else {
       this.desktopControls.reset()
@@ -174,8 +175,9 @@ class App {
       await this.viewer.loadMedia(item)
       this.setMode('viewer')
 
-      // Switch to immersive camera for 360 content
-      if (!this.isInVR && this.viewer.getMode() === '360') {
+      // Switch to immersive camera for 360/pano content
+      const mode = this.viewer.getMode()
+      if (!this.isInVR && (mode === '360' || mode === 'pano')) {
         this.desktopControls.setImmersiveMode(true)
       }
     } catch (error) {
@@ -190,6 +192,7 @@ class App {
       this.gallery.setVisible(true)
       this.viewer.getFlatScreen().setVisible(false)
       this.viewer.getSphere360().setVisible(false)
+      this.viewer.getPanoViewer().setVisible(false)
 
       // Reset camera for gallery view
       if (!this.isInVR) {
