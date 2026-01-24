@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { XRSessionManager } from './vr/XRSessionManager'
 import { XRInputManager } from './vr/XRInputManager'
+import { DesktopControls } from './input/DesktopControls'
 import { Environment } from './scene/Environment'
 import { ViewerController } from './scene/ViewerController'
 import { MediaLoader } from './media/MediaLoader'
@@ -14,11 +15,13 @@ class App {
   private scene: THREE.Scene
   private camera: THREE.PerspectiveCamera
   private xrInput: XRInputManager
+  private desktopControls: DesktopControls
   private mediaLoader: MediaLoader
   private viewer: ViewerController
   private gallery: Gallery
   private mediaItems: MediaItem[] = []
   private mode: AppMode = 'gallery'
+  private isInVR = false
 
   constructor() {
     // Renderer
@@ -32,7 +35,7 @@ class App {
     this.scene = new THREE.Scene()
     this.scene.background = new THREE.Color(0x101010)
 
-    // Camera (for non-VR preview)
+    // Camera (for non-VR)
     this.camera = new THREE.PerspectiveCamera(
       70,
       window.innerWidth / window.innerHeight,
@@ -45,7 +48,9 @@ class App {
     new Environment(this.scene)
 
     // XR Session Manager
-    new XRSessionManager(this.renderer)
+    const xrSession = new XRSessionManager(this.renderer)
+    xrSession.onSessionStart(() => this.onVRSessionStart())
+    xrSession.onSessionEnd(() => this.onVRSessionEnd())
 
     // Media Loader
     this.mediaLoader = new MediaLoader()
@@ -57,17 +62,19 @@ class App {
     // Viewer Controller (manages flat screen and 360 sphere)
     this.viewer = new ViewerController(this.scene, this.mediaLoader)
 
-    // XR Input Manager
+    // XR Input Manager (for VR controllers)
     this.xrInput = new XRInputManager(this.renderer, this.scene)
-    this.setupInputHandlers()
+    this.setupVRInputHandlers()
+
+    // Desktop Controls (orbit camera + mouse click)
+    this.desktopControls = new DesktopControls(this.camera, this.renderer, this.scene)
+    this.desktopControls.onInteract((object) => this.handleInteraction(object))
 
     // File picker
     this.setupFilePicker()
 
     // Events
     window.addEventListener('resize', this.onResize.bind(this))
-
-    // Keyboard navigation
     window.addEventListener('keydown', this.onKeyDown.bind(this))
 
     // Start in gallery mode
@@ -75,6 +82,24 @@ class App {
 
     // Start render loop
     this.renderer.setAnimationLoop(this.render.bind(this))
+
+    console.log('VR Media Viewer ready - use mouse to orbit, click to interact')
+  }
+
+  private onVRSessionStart(): void {
+    this.isInVR = true
+    this.desktopControls.setEnabled(false)
+  }
+
+  private onVRSessionEnd(): void {
+    this.isInVR = false
+    this.desktopControls.setEnabled(true)
+    // Reset camera when exiting VR
+    if (this.mode === 'viewer' && this.viewer.getMode() === '360') {
+      this.desktopControls.setImmersiveMode(true)
+    } else {
+      this.desktopControls.reset()
+    }
   }
 
   private setupFilePicker(): void {
@@ -105,7 +130,6 @@ class App {
 
     toggleGalleryBtn.addEventListener('click', () => {
       if (this.mode === 'gallery') {
-        // If something selected, open it
         const index = this.gallery.getSelectedIndex()
         if (index >= 0 && this.mediaItems[index]) {
           this.openMedia(this.mediaItems[index])
@@ -120,6 +144,11 @@ class App {
     try {
       await this.viewer.loadMedia(item)
       this.setMode('viewer')
+
+      // Switch to immersive camera for 360 content
+      if (!this.isInVR && this.viewer.getMode() === '360') {
+        this.desktopControls.setImmersiveMode(true)
+      }
     } catch (error) {
       console.error('Failed to load media:', error)
     }
@@ -132,6 +161,11 @@ class App {
       this.gallery.setVisible(true)
       this.viewer.getFlatScreen().setVisible(false)
       this.viewer.getSphere360().setVisible(false)
+
+      // Reset camera for gallery view
+      if (!this.isInVR) {
+        this.desktopControls.setImmersiveMode(false)
+      }
     } else {
       this.gallery.setVisible(false)
       // Viewer visibility managed by ViewerController
@@ -144,27 +178,36 @@ class App {
     }
   }
 
-  private setupInputHandlers(): void {
+  private handleInteraction(object: THREE.Object3D): void {
+    if (this.mode === 'gallery') {
+      this.gallery.handleInteraction(object)
+    } else {
+      this.viewer.handleInteraction(object)
+    }
+  }
+
+  private setupVRInputHandlers(): void {
     for (let i = 0; i < 2; i++) {
       const controller = this.xrInput.getController(i)
       ;(controller as any).addEventListener('interact', (event: { detail?: { target: THREE.Object3D } }) => {
         const target = event.detail?.target
-        if (!target) return
-
-        if (this.mode === 'gallery') {
-          // Try gallery interaction first
-          const handled = this.gallery.handleInteraction(target)
-          if (!handled) {
-            // Check if clicking outside gallery to close
-          }
-        } else {
-          this.viewer.handleInteraction(target)
+        if (target) {
+          this.handleInteraction(target)
         }
       })
     }
   }
 
   private onKeyDown(event: KeyboardEvent): void {
+    // Spacebar to toggle play/pause in viewer mode
+    if (event.key === ' ' && this.mode === 'viewer') {
+      const screen = this.viewer.getFlatScreen()
+      // Trigger play/pause by simulating screen click
+      screen.handleInteraction(screen as any)
+      event.preventDefault()
+      return
+    }
+
     if (this.mode === 'gallery') {
       switch (event.key) {
         case 'ArrowRight':
@@ -205,7 +248,13 @@ class App {
   }
 
   private render(): void {
-    this.xrInput.update()
+    // Update appropriate input system
+    if (this.isInVR) {
+      this.xrInput.update()
+    } else {
+      this.desktopControls.update()
+    }
+
     this.renderer.render(this.scene, this.camera)
   }
 }

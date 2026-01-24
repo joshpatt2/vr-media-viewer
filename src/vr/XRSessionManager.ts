@@ -4,12 +4,22 @@ export class XRSessionManager {
   private renderer: THREE.WebGLRenderer
   private button: HTMLButtonElement
   private currentSession: XRSession | null = null
+  private sessionStartCallback?: () => void
+  private sessionEndCallback?: () => void
 
   constructor(renderer: THREE.WebGLRenderer) {
     this.renderer = renderer
     this.button = document.getElementById('vr-button') as HTMLButtonElement
 
     this.checkXRSupport()
+  }
+
+  onSessionStart(callback: () => void): void {
+    this.sessionStartCallback = callback
+  }
+
+  onSessionEnd(callback: () => void): void {
+    this.sessionEndCallback = callback
   }
 
   private async checkXRSupport(): Promise<void> {
@@ -60,11 +70,14 @@ export class XRSessionManager {
         // Fallback if not supported
       })
     }
+
+    this.sessionStartCallback?.()
   }
 
   private onSessionEnded(): void {
     this.currentSession = null
     this.button.textContent = 'Enter VR'
+    this.sessionEndCallback?.()
   }
 
   get isInVR(): boolean {
