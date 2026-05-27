@@ -45,6 +45,7 @@ export class FlatScreen {
     const mesh = new THREE.Mesh(geometry, material)
     mesh.name = 'flat-screen'
     mesh.userData.interactive = true
+    mesh.castShadow = true
 
     return mesh
   }
@@ -77,6 +78,7 @@ export class FlatScreen {
 
     const mesh = new THREE.Mesh(geometry, material)
     mesh.position.z = -0.01
+    mesh.castShadow = true
 
     return mesh
   }
