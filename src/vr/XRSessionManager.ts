@@ -86,11 +86,7 @@ export class XRSessionManager {
     this.renderer.xr.setSession(session)
 
     // Request 90Hz for Quest 3 passthrough, 72Hz fallback
-    if ('updateTargetFrameRate' in session) {
-      (session as any).updateTargetFrameRate(90).catch(() => {
-        (session as any).updateTargetFrameRate(72).catch(() => {})
-      })
-    }
+    void this.setTargetFrameRate(session, [90, 72])
 
     this.sessionStartCallback?.(this.supportedMode!)
   }
@@ -99,6 +95,19 @@ export class XRSessionManager {
     this.currentSession = null
     this.button.textContent = this.supportedMode === 'ar' ? 'Enter MR' : 'Enter VR'
     this.sessionEndCallback?.()
+  }
+
+  private async setTargetFrameRate(session: XRSession, candidates: number[]): Promise<void> {
+    if (!('updateTargetFrameRate' in session)) return
+
+    for (const rate of candidates) {
+      try {
+        await (session as any).updateTargetFrameRate(rate)
+        return
+      } catch {
+        // try next candidate
+      }
+    }
   }
 
   get isInXR(): boolean {
