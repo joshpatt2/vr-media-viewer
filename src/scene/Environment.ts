@@ -51,7 +51,7 @@ export class Environment {
 
     // Shadow-only material - transparent but receives shadows
     const material = new THREE.ShadowMaterial({
-      opacity: 0.3, // Subtle shadow
+      opacity: 0.18,
     })
 
     const plane = new THREE.Mesh(geometry, material)
@@ -86,10 +86,10 @@ export class Environment {
     directional.shadow.mapSize.height = 2048
     directional.shadow.camera.near = 0.5
     directional.shadow.camera.far = 20
-    directional.shadow.camera.left = -10
-    directional.shadow.camera.right = 10
-    directional.shadow.camera.top = 10
-    directional.shadow.camera.bottom = -10
+    directional.shadow.camera.left = -6
+    directional.shadow.camera.right = 6
+    directional.shadow.camera.top = 6
+    directional.shadow.camera.bottom = -6
     directional.shadow.bias = -0.0001
 
     this.scene.add(directional)
