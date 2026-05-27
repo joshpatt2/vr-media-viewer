@@ -23,7 +23,7 @@ class App {
   private gallery: Gallery
   private mediaItems: MediaItem[] = []
   private mode: AppMode = 'gallery'
-  private isInVR = false
+  private isInXR = false
 
   constructor() {
     // Renderer - alpha:true for passthrough transparency
@@ -127,7 +127,7 @@ class App {
   }
 
   private onXRSessionStart(mode: SessionMode): void {
-    this.isInVR = true
+    this.isInXR = true
     this.desktopControls.setEnabled(false)
 
     // In passthrough mode, use transparent background and shadow plane
@@ -141,7 +141,7 @@ class App {
   }
 
   private onXRSessionEnd(): void {
-    this.isInVR = false
+    this.isInXR = false
     this.desktopControls.setEnabled(true)
 
     // Restore background and environment for desktop
@@ -202,7 +202,7 @@ class App {
 
       // Switch to immersive camera for 360/pano content
       const mode = this.viewer.getMode()
-      if (!this.isInVR && (mode === '360' || mode === 'pano')) {
+      if (!this.isInXR && (mode === '360' || mode === 'pano')) {
         this.desktopControls.setImmersiveMode(true)
       }
     } catch (error) {
@@ -221,7 +221,7 @@ class App {
       this.viewer.getSpatialViewer().setVisible(false)
 
       // Reset camera for gallery view
-      if (!this.isInVR) {
+      if (!this.isInXR) {
         this.desktopControls.setImmersiveMode(false)
       }
     } else {
@@ -307,7 +307,7 @@ class App {
 
   private render(): void {
     // Update appropriate input system
-    if (this.isInVR) {
+    if (this.isInXR) {
       this.xrInput.update()
     } else {
       this.desktopControls.update()
