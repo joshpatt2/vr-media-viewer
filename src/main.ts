@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { XRSessionManager } from './vr/XRSessionManager'
+import { XRSessionManager, SessionMode } from './vr/XRSessionManager'
 import { XRInputManager } from './vr/XRInputManager'
 import { DesktopControls } from './input/DesktopControls'
 import { Environment } from './scene/Environment'
@@ -17,6 +17,7 @@ class App {
   private camera: THREE.PerspectiveCamera
   private xrInput: XRInputManager
   private desktopControls: DesktopControls
+  private environment: Environment
   private mediaLoader: MediaLoader
   private viewer: ViewerController
   private gallery: Gallery
@@ -25,11 +26,17 @@ class App {
   private isInVR = false
 
   constructor() {
-    // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true })
+    // Renderer - alpha:true for passthrough transparency
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     this.renderer.setPixelRatio(window.devicePixelRatio)
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.xr.enabled = true
+    this.renderer.setClearColor(0x000000, 0) // Transparent background
+
+    // Enable shadow mapping for grounding virtual objects
+    this.renderer.shadowMap.enabled = true
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+
     document.body.appendChild(this.renderer.domElement)
 
     // Scene
@@ -49,13 +56,13 @@ class App {
     this.camera.layers.enable(1)
     this.camera.layers.enable(2)
 
-    // Environment (floor, lights)
-    new Environment(this.scene)
+    // Environment (floor, lights, shadow plane)
+    this.environment = new Environment(this.scene)
 
     // XR Session Manager
     const xrSession = new XRSessionManager(this.renderer)
-    xrSession.onSessionStart(() => this.onVRSessionStart())
-    xrSession.onSessionEnd(() => this.onVRSessionEnd())
+    xrSession.onSessionStart((mode) => this.onXRSessionStart(mode))
+    xrSession.onSessionEnd(() => this.onXRSessionEnd())
 
     // Media Loader
     this.mediaLoader = new MediaLoader()
@@ -119,14 +126,28 @@ class App {
     console.log('Loaded', this.mediaItems.length, 'assets from manifest')
   }
 
-  private onVRSessionStart(): void {
+  private onXRSessionStart(mode: SessionMode): void {
     this.isInVR = true
     this.desktopControls.setEnabled(false)
+
+    // In passthrough mode, use transparent background and shadow plane
+    if (mode === 'ar') {
+      this.scene.background = null // Transparent for passthrough
+      this.environment.setPassthroughMode(true)
+    } else {
+      // VR mode - keep solid environment
+      this.environment.setPassthroughMode(false)
+    }
   }
 
-  private onVRSessionEnd(): void {
+  private onXRSessionEnd(): void {
     this.isInVR = false
     this.desktopControls.setEnabled(true)
+
+    // Restore background and environment for desktop
+    this.scene.background = new THREE.Color(0x101010)
+    this.environment.setPassthroughMode(false)
+
     // Reset camera when exiting VR
     const viewerMode = this.viewer.getMode()
     if (this.mode === 'viewer' && (viewerMode === '360' || viewerMode === 'pano')) {

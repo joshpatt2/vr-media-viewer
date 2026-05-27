@@ -1,11 +1,14 @@
 import * as THREE from 'three'
 
+export type SessionMode = 'ar' | 'vr'
+
 export class XRSessionManager {
   private renderer: THREE.WebGLRenderer
   private button: HTMLButtonElement
   private currentSession: XRSession | null = null
-  private sessionStartCallback?: () => void
+  private sessionStartCallback?: (mode: SessionMode) => void
   private sessionEndCallback?: () => void
+  private supportedMode: SessionMode | null = null
 
   constructor(renderer: THREE.WebGLRenderer) {
     this.renderer = renderer
@@ -14,7 +17,7 @@ export class XRSessionManager {
     this.checkXRSupport()
   }
 
-  onSessionStart(callback: () => void): void {
+  onSessionStart(callback: (mode: SessionMode) => void): void {
     this.sessionStartCallback = callback
   }
 
@@ -28,14 +31,22 @@ export class XRSessionManager {
       return
     }
 
-    const isSupported = await navigator.xr.isSessionSupported('immersive-vr')
+    // Check for AR (passthrough) support first - preferred mode
+    const arSupported = await navigator.xr.isSessionSupported('immersive-ar')
+    const vrSupported = await navigator.xr.isSessionSupported('immersive-vr')
 
-    if (isSupported) {
+    if (arSupported) {
+      this.supportedMode = 'ar'
+      this.button.textContent = 'Enter MR'
+      this.button.disabled = false
+      this.button.addEventListener('click', () => this.toggleSession())
+    } else if (vrSupported) {
+      this.supportedMode = 'vr'
       this.button.textContent = 'Enter VR'
       this.button.disabled = false
       this.button.addEventListener('click', () => this.toggleSession())
     } else {
-      this.button.textContent = 'VR Not Available'
+      this.button.textContent = 'XR Not Available'
     }
   }
 
@@ -46,9 +57,19 @@ export class XRSessionManager {
     }
 
     try {
-      const session = await navigator.xr!.requestSession('immersive-vr', {
-        optionalFeatures: ['local-floor', 'hand-tracking'],
-      })
+      let session: XRSession
+
+      if (this.supportedMode === 'ar') {
+        // AR session with passthrough
+        session = await navigator.xr!.requestSession('immersive-ar', {
+          optionalFeatures: ['local-floor', 'hand-tracking'],
+        })
+      } else {
+        // Fallback to VR
+        session = await navigator.xr!.requestSession('immersive-vr', {
+          optionalFeatures: ['local-floor', 'hand-tracking'],
+        })
+      }
 
       this.onSessionStarted(session)
     } catch (error) {
@@ -58,29 +79,33 @@ export class XRSessionManager {
 
   private onSessionStarted(session: XRSession): void {
     this.currentSession = session
-    this.button.textContent = 'Exit VR'
+    this.button.textContent = this.supportedMode === 'ar' ? 'Exit MR' : 'Exit VR'
 
     session.addEventListener('end', () => this.onSessionEnded())
 
     this.renderer.xr.setSession(session)
 
-    // Request 72Hz for Quest
+    // Request 90Hz for Quest 3 passthrough, 72Hz fallback
     if ('updateTargetFrameRate' in session) {
-      (session as any).updateTargetFrameRate(72).catch(() => {
-        // Fallback if not supported
+      (session as any).updateTargetFrameRate(90).catch(() => {
+        (session as any).updateTargetFrameRate(72).catch(() => {})
       })
     }
 
-    this.sessionStartCallback?.()
+    this.sessionStartCallback?.(this.supportedMode!)
   }
 
   private onSessionEnded(): void {
     this.currentSession = null
-    this.button.textContent = 'Enter VR'
+    this.button.textContent = this.supportedMode === 'ar' ? 'Enter MR' : 'Enter VR'
     this.sessionEndCallback?.()
   }
 
-  get isInVR(): boolean {
+  get isInXR(): boolean {
     return this.currentSession !== null
+  }
+
+  get isPassthrough(): boolean {
+    return this.currentSession !== null && this.supportedMode === 'ar'
   }
 }

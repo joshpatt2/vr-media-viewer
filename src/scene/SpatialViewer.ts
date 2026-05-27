@@ -50,6 +50,7 @@ export class SpatialViewer {
       this.leftPlane = new THREE.Mesh(geometry, leftMaterial)
       this.leftPlane.layers.set(LEFT_EYE_LAYER) // Only visible to left eye
       this.leftPlane.name = 'spatial-left'
+      this.leftPlane.castShadow = true
       this.group.add(this.leftPlane)
 
       // Create right eye plane
@@ -60,6 +61,7 @@ export class SpatialViewer {
       this.rightPlane = new THREE.Mesh(geometry.clone(), rightMaterial)
       this.rightPlane.layers.set(RIGHT_EYE_LAYER) // Only visible to right eye
       this.rightPlane.name = 'spatial-right'
+      this.rightPlane.castShadow = true
       this.group.add(this.rightPlane)
 
       // Also create a combined plane for non-VR viewing (shows left eye)
@@ -70,6 +72,7 @@ export class SpatialViewer {
       monoPlane.layers.set(0) // Default layer for non-VR
       monoPlane.name = 'spatial-mono'
       monoPlane.userData.interactive = true
+      monoPlane.castShadow = true
       this.group.add(monoPlane)
 
       // Add frame
@@ -112,6 +115,7 @@ export class SpatialViewer {
 
     const frame = new THREE.Mesh(geometry, material)
     frame.position.z = -0.01
+    frame.castShadow = true
     this.group.add(frame)
   }
 

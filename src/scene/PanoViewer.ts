@@ -99,6 +99,7 @@ export class PanoViewer {
 
     const mesh = new THREE.Mesh(geometry, material)
     mesh.position.set(0, meshHeight / 2 + 0.5, 0) // Slightly above ground, centered
+    mesh.castShadow = true
 
     return mesh
   }
