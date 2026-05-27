@@ -5,6 +5,9 @@ export class Environment {
   private floor: THREE.Mesh
   private shadowPlane: THREE.Mesh
   private grid: THREE.GridHelper
+  private ambient!: THREE.AmbientLight
+  private hemisphere!: THREE.HemisphereLight
+  private directional!: THREE.DirectionalLight
   private isPassthroughMode = false
 
   constructor(scene: THREE.Scene) {
@@ -69,30 +72,30 @@ export class Environment {
 
   private setupLighting(): void {
     // Ambient light (soft fill)
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6)
-    this.scene.add(ambient)
+    this.ambient = new THREE.AmbientLight(0xffffff, 0.6)
+    this.scene.add(this.ambient)
 
     // Hemisphere light (sky/ground gradient)
-    const hemisphere = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4)
-    this.scene.add(hemisphere)
+    this.hemisphere = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4)
+    this.scene.add(this.hemisphere)
 
     // Directional light for shadows
-    const directional = new THREE.DirectionalLight(0xffffff, 1.0)
-    directional.position.set(2, 8, 4)
-    directional.castShadow = true
+    this.directional = new THREE.DirectionalLight(0xffffff, 1.0)
+    this.directional.position.set(2, 8, 4)
+    this.directional.castShadow = true
 
     // Shadow map settings for crisp shadows
-    directional.shadow.mapSize.width = 2048
-    directional.shadow.mapSize.height = 2048
-    directional.shadow.camera.near = 0.5
-    directional.shadow.camera.far = 20
-    directional.shadow.camera.left = -10
-    directional.shadow.camera.right = 10
-    directional.shadow.camera.top = 10
-    directional.shadow.camera.bottom = -10
-    directional.shadow.bias = -0.0001
+    this.directional.shadow.mapSize.width = 2048
+    this.directional.shadow.mapSize.height = 2048
+    this.directional.shadow.camera.near = 0.5
+    this.directional.shadow.camera.far = 20
+    this.directional.shadow.camera.left = -10
+    this.directional.shadow.camera.right = 10
+    this.directional.shadow.camera.top = 10
+    this.directional.shadow.camera.bottom = -10
+    this.directional.shadow.bias = -0.0001
 
-    this.scene.add(directional)
+    this.scene.add(this.directional)
   }
 
   /**
@@ -124,5 +127,27 @@ export class Environment {
 
   getShadowPlane(): THREE.Mesh {
     return this.shadowPlane
+  }
+
+  dispose(): void {
+    this.scene.remove(
+      this.floor,
+      this.shadowPlane,
+      this.grid,
+      this.ambient,
+      this.hemisphere,
+      this.directional,
+    )
+
+    this.floor.geometry.dispose()
+    ;(this.floor.material as THREE.Material).dispose()
+
+    this.shadowPlane.geometry.dispose()
+    ;(this.shadowPlane.material as THREE.Material).dispose()
+
+    this.grid.geometry.dispose()
+    ;(this.grid.material as THREE.Material).dispose()
+
+    this.directional.shadow.dispose()
   }
 }
